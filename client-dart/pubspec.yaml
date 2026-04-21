@@ -1,0 +1,19 @@
+name: fee_vault_client
+description: Pure-Dart client for the fee_vault Solana program. BIP39 + Ed25519 HD wallet derivation, Anchor instruction encoding, and gasless multi-signature transaction assembly.
+version: 0.1.0
+publish_to: 'none'
+
+environment:
+  sdk: '>=3.6.0 <4.0.0'
+
+dependencies:
+  solana: ^0.31.2+1
+  bip39: ^1.0.6
+  bip32: ^2.0.0
+  ed25519_hd_key: ^2.0.1
+  crypto: ^3.0.6
+  hex: ^0.2.0
+
+dev_dependencies:
+  test: ^1.25.0
+  lints: ^4.0.0

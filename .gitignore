@@ -1,0 +1,54 @@
+# Rust / Anchor
+target/
+.anchor/
+**/*.rs.bk
+# NB: Cargo.lock IS committed; Anchor programs are deployed binaries
+# and reproducible builds matter for verifiable on-chain deployments.
+
+# Solana keypairs and config
+*-keypair.json
+*.keypair.json
+id.json
+authority.json
+sponsor.json
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.key
+
+# Node / TypeScript
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Dart / Flutter
+.dart_tool/
+.packages
+build/
+pubspec.lock
+.pub-cache/
+.pub/
+doc/api/
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# OS
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Backup archives
+*.zip
+*.tar.gz
+*.bak
