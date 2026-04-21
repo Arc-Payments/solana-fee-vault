@@ -48,8 +48,14 @@ jobs:
       - name: Generate test keypair
         run: solana-keygen new --no-bip39-passphrase --force --silent -o ~/.config/solana/id.json
 
+      - name: Generate program keypair and sync IDs
+        run: |
+          mkdir -p target/deploy
+          solana-keygen new --no-bip39-passphrase --force --silent -o target/deploy/fee_vault-keypair.json
+          anchor keys sync
+
       - name: Build
         run: anchor build
 
       - name: Test
-        run: anchor test --skip-lint
+        run: anchor test --skip-lint --skip-build
