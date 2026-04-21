@@ -152,11 +152,24 @@ void main() {
     );
 
     test('account meta order matches the Rust SweepRemainder struct', () {
+      // [vault, authority, sponsor (mut+signer), system_program]
       expect(ix.accounts.length, 4);
+
       expect(ix.accounts[0].pubKey, vaultPda);
+      expect(ix.accounts[0].isWriteable, true);
+      expect(ix.accounts[0].isSigner, false);
+
       expect(ix.accounts[1].pubKey, authority);
+      expect(ix.accounts[1].isWriteable, false);
+      expect(ix.accounts[1].isSigner, true);
+
       expect(ix.accounts[2].pubKey, sponsor);
+      expect(ix.accounts[2].isWriteable, true);
+      expect(ix.accounts[2].isSigner, true);
+
       expect(ix.accounts[3].pubKey.toBase58(), _systemProgramId);
+      expect(ix.accounts[3].isWriteable, false);
+      expect(ix.accounts[3].isSigner, false);
     });
 
     test('data is exactly the 8-byte discriminator (no args)', () {

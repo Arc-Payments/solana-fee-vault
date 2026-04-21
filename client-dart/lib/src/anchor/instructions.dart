@@ -102,8 +102,12 @@ class FeeVaultInstructions {
   ///
   /// Account order matches the `SweepRemainder` struct:
   /// `[vault, authority, sponsor, system_program]`. Same authority check as
-  /// [topUpSponsor]. The instruction is a no-op when the sponsor balance is
-  /// already at or below the on-chain `MIN_SPONSOR_BALANCE` floor.
+  /// [topUpSponsor], plus `sponsor` must sign so the program can issue a
+  /// `system_program::transfer` CPI back into the vault. In normal use the
+  /// sponsor is also the fee payer, so it is signing anyway.
+  ///
+  /// The instruction is a no-op when the sponsor balance is already at or
+  /// below the on-chain `MIN_SPONSOR_BALANCE` floor.
   static Instruction sweepRemainder({
     required Ed25519HDPublicKey programId,
     required Ed25519HDPublicKey vaultPda,
@@ -117,7 +121,7 @@ class FeeVaultInstructions {
       accounts: [
         AccountMeta.writeable(pubKey: vaultPda, isSigner: false),
         AccountMeta.readonly(pubKey: authority, isSigner: true),
-        AccountMeta.writeable(pubKey: sponsor, isSigner: false),
+        AccountMeta.writeable(pubKey: sponsor, isSigner: true),
         AccountMeta.readonly(pubKey: SystemProgram.id, isSigner: false),
       ],
       data: data,

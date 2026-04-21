@@ -44,6 +44,12 @@ We require the `sponsor` account to be system-owned. Two reasons:
 2. It blocks an attacker from passing in another program's PDA as the sponsor
    to confuse downstream programs about the source of funds.
 
+`top_up_sponsor` enforces this with an explicit `sponsor.owner ==
+system_program::ID` check (it accepts `AccountInfo` because the runtime
+doesn't need a sponsor signature to credit it). `sweep_remainder` instead
+declares `sponsor` as `Signer<'info>`, which Anchor only satisfies for
+system-owned accounts — so the same property is enforced structurally.
+
 ### Per-transaction and daily limits
 
 `max_per_transaction` and `max_daily_spend` cap the blast radius if the
@@ -65,21 +71,30 @@ does not need to coordinate with key rotation: the `emergency_authority`
 flips the pause flag, the operational key gets rotated separately via
 `update_authority`-style flows (not yet in v1, see open issues).
 
-### Manual lamport mutation on a program-owned account
+### Manual lamport mutation vs. system-program CPI
 
-Inside `top_up_sponsor` we mutate lamports directly:
+The two ways to move SOL on Solana have different ownership requirements, and
+the program uses each one where it is forced to:
 
-```rust
-**vault_info.try_borrow_mut_lamports()? -= max_lamports;
-**sponsor_info.try_borrow_mut_lamports()? += max_lamports;
-```
+- `top_up_sponsor` debits the **vault PDA** (program-owned) and credits the
+  **sponsor** (system-owned). The runtime forbids a `system_program::transfer`
+  from an account it does not own, so we mutate lamports directly:
 
-This is the canonical Anchor pattern when the **source** account is
-program-owned. A `system_program::transfer` CPI would fail because the system
-program rejects transfers from accounts whose owner is not the system program
-itself. The values are checked with `checked_sub` / `checked_add` to avoid
-silent wraparound; both writes happen inside the same instruction so
-`top_up_sponsor` is atomic — either both moves land or neither does.
+  ```rust
+  **vault_info.try_borrow_mut_lamports()? -= max_lamports;
+  **sponsor_info.try_borrow_mut_lamports()? += max_lamports;
+  ```
+
+  Both writes use `checked_sub` / `checked_add` and live in the same
+  instruction, so `top_up_sponsor` is atomic — either both moves land or
+  neither does.
+
+- `sweep_remainder` goes the other way: it debits the **sponsor**
+  (system-owned). Direct mutation is therefore *not* allowed; we have to do a
+  `system_program::transfer` CPI, which requires the sponsor to sign. In
+  normal use the sponsor is also the surrounding transaction's fee payer, so
+  it is signing anyway, and `Signer<'info>` on the account struct enforces
+  this structurally.
 
 ### `MIN_SPONSOR_BALANCE` floor on sweeps
 

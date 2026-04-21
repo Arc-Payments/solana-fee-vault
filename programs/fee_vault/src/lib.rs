@@ -172,9 +172,16 @@ pub mod fee_vault {
 
     /// Sweep any sponsor balance above `MIN_SPONSOR_BALANCE` back into the vault PDA.
     ///
-    /// Requires the vault `authority` to sign. Idempotent: if the sponsor balance is at or
-    /// below the floor, nothing is moved. The floor exists so the sponsor account stays
-    /// rent-exempt across sponsored transactions.
+    /// Requires the vault `authority` and the `sponsor` itself to sign. In normal usage
+    /// the sponsor is the fee payer of the surrounding transaction, so it is already
+    /// signing — adding the `Signer` constraint just lets us issue a `system_program::transfer`
+    /// CPI from the system-owned sponsor account back into the vault. (Direct lamport
+    /// mutation cannot be used here: the runtime forbids debiting an account the program
+    /// does not own.)
+    ///
+    /// Idempotent: if the sponsor balance is at or below the floor, nothing is moved.
+    /// The floor exists so the sponsor account stays rent-exempt across sponsored
+    /// transactions.
     ///
     /// `total_sponsored` is **not** decremented here: it tracks gross outflow over the
     /// vault's lifetime, not net spend.
@@ -183,26 +190,25 @@ pub mod fee_vault {
             !ctx.accounts.vault.is_emergency_paused,
             ErrorCode::EmergencyPaused
         );
-        require!(
-            ctx.accounts.sponsor.owner == &system_program::ID,
-            ErrorCode::InvalidSponsorAccount
-        );
 
-        let sponsor_info = ctx.accounts.sponsor.to_account_info();
-        let vault_info = ctx.accounts.vault.to_account_info();
-
-        let sponsor_balance = sponsor_info.lamports();
+        let sponsor_balance = ctx.accounts.sponsor.lamports();
         if sponsor_balance <= MIN_SPONSOR_BALANCE {
-            msg!("sweep_remainder: nothing to sweep (balance={})", sponsor_balance);
+            msg!(
+                "sweep_remainder: nothing to sweep (balance={})",
+                sponsor_balance
+            );
             return Ok(());
         }
 
         let sweep_amount = sponsor_balance - MIN_SPONSOR_BALANCE;
-        **sponsor_info.try_borrow_mut_lamports()? = MIN_SPONSOR_BALANCE;
-        **vault_info.try_borrow_mut_lamports()? = vault_info
-            .lamports()
-            .checked_add(sweep_amount)
-            .ok_or(ErrorCode::ArithmeticOverflow)?;
+        let cpi_ctx = CpiContext::new(
+            ctx.accounts.system_program.to_account_info(),
+            anchor_lang::system_program::Transfer {
+                from: ctx.accounts.sponsor.to_account_info(),
+                to: ctx.accounts.vault.to_account_info(),
+            },
+        );
+        anchor_lang::system_program::transfer(cpi_ctx, sweep_amount)?;
 
         msg!("sweep_remainder: amount={}", sweep_amount);
         Ok(())
@@ -314,9 +320,10 @@ pub struct SweepRemainder<'info> {
 
     pub authority: Signer<'info>,
 
-    /// CHECK: ownership is asserted in the instruction handler.
+    /// Must sign so we can `system_program::transfer` lamports back from the
+    /// sponsor (system-owned) into the vault. `Signer` also implies system-owned.
     #[account(mut)]
-    pub sponsor: AccountInfo<'info>,
+    pub sponsor: Signer<'info>,
 
     pub system_program: Program<'info, System>,
 }

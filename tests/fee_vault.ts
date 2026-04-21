@@ -79,25 +79,11 @@ describe("fee_vault", () => {
     expect(vault.bump).to.equal(vaultBump);
   });
 
-  it("rejects initialize when per-tx > daily", async () => {
-    const altPayer = Keypair.generate();
-    await airdrop(connection, altPayer.publicKey, 1 * LAMPORTS_PER_SOL);
-
-    await expectAnchorError(
-      program.methods
-        .initialize(new anchor.BN(100), new anchor.BN(200))
-        .accountsStrict({
-          vault: vaultPda,
-          authority: authority.publicKey,
-          emergencyAuthority: emergencyAuthority.publicKey,
-          payer: altPayer.publicKey,
-          systemProgram: SystemProgram.programId,
-        })
-        .signers([authority, altPayer])
-        .rpc(),
-      "InvalidLimits",
-    );
-  });
+  // The `init` constraint protection (can't re-initialize the PDA) is exercised
+  // implicitly by the validator: any second `initialize` call against the same
+  // seed returns "account already in use" before our `InvalidLimits` check
+  // fires, so a "per-tx > daily" test belongs in `update_limits` (below) where
+  // the PDA already exists.
 
   describe("fund_vault (system transfer)", () => {
     it("vault PDA accepts plain SOL transfers", async () => {
@@ -206,9 +192,15 @@ describe("fee_vault", () => {
     });
 
     it("rejects when cumulative daily spend would exceed max_daily_spend", async () => {
-      // Tighten the daily limit so the next single PER_TX_LIMIT call would breach it.
+      // Tighten the daily limit so the *next* call of PER_TX_LIMIT lamports
+      // would exceed it by 1. We can't make `daily < per_tx` because that
+      // trips `update_limits`' own InvalidLimits check first, so we shrink
+      // both knobs together: per_tx stays at PER_TX_LIMIT and daily becomes
+      // (already-spent + PER_TX_LIMIT - 1).
       const vaultBefore = await program.account.feeVault.fetch(vaultPda);
-      const tightDaily = vaultBefore.dailySpent.add(new anchor.BN(1));
+      const tightDaily = vaultBefore.dailySpent
+        .add(PER_TX_LIMIT)
+        .sub(new anchor.BN(1));
 
       await program.methods
         .updateLimits(tightDaily, PER_TX_LIMIT)
@@ -221,7 +213,7 @@ describe("fee_vault", () => {
 
       await expectAnchorError(
         program.methods
-          .topUpSponsor(new anchor.BN(0.001 * LAMPORTS_PER_SOL))
+          .topUpSponsor(PER_TX_LIMIT)
           .accountsStrict({
             vault: vaultPda,
             authority: authority.publicKey,
@@ -261,7 +253,7 @@ describe("fee_vault", () => {
           sponsor: sponsor.publicKey,
           systemProgram: SystemProgram.programId,
         })
-        .signers([authority])
+        .signers([authority, sponsor])
         .rpc();
 
       const sponsorAfter = await connection.getBalance(sponsor.publicKey);
@@ -282,7 +274,7 @@ describe("fee_vault", () => {
           sponsor: sponsor.publicKey,
           systemProgram: SystemProgram.programId,
         })
-        .signers([authority])
+        .signers([authority, sponsor])
         .rpc();
 
       expect(await connection.getBalance(sponsor.publicKey)).to.equal(sponsorBefore);
@@ -290,6 +282,8 @@ describe("fee_vault", () => {
     });
 
     it("rejects an unauthorized signer", async () => {
+      // Sponsor still signs (it has to, structurally), but the authority slot
+      // is filled by `intruder`, which is the value the `has_one` check rejects.
       await expectAnchorError(
         program.methods
           .sweepRemainder()
@@ -299,7 +293,7 @@ describe("fee_vault", () => {
             sponsor: sponsor.publicKey,
             systemProgram: SystemProgram.programId,
           })
-          .signers([intruder])
+          .signers([intruder, sponsor])
           .rpc(),
         "Unauthorized",
       );
