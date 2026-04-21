@@ -1,16 +1,28 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program, AnchorError } from "@coral-xyz/anchor";
-import { PublicKey, Keypair, SystemProgram, LAMPORTS_PER_SOL } from "@solana/web3.js";
+import {
+  PublicKey,
+  Keypair,
+  SystemProgram,
+  LAMPORTS_PER_SOL,
+} from "@solana/web3.js";
 import { expect } from "chai";
 import { FeeVault } from "../target/types/fee_vault";
 
 const VAULT_SEED = Buffer.from("fee_vault");
 const MIN_SPONSOR_BALANCE = 1_000_000;
 
-async function airdrop(connection: anchor.web3.Connection, to: PublicKey, lamports: number) {
+async function airdrop(
+  connection: anchor.web3.Connection,
+  to: PublicKey,
+  lamports: number,
+) {
   const sig = await connection.requestAirdrop(to, lamports);
   const blockhash = await connection.getLatestBlockhash();
-  await connection.confirmTransaction({ signature: sig, ...blockhash }, "confirmed");
+  await connection.confirmTransaction(
+    { signature: sig, ...blockhash },
+    "confirmed",
+  );
 }
 
 async function expectAnchorError(promise: Promise<unknown>, code: string) {
@@ -18,7 +30,9 @@ async function expectAnchorError(promise: Promise<unknown>, code: string) {
     await promise;
     expect.fail(`expected AnchorError with code "${code}" but call succeeded`);
   } catch (err) {
-    const anchorErr = AnchorError.parse((err as { logs?: string[] }).logs ?? []);
+    const anchorErr = AnchorError.parse(
+      (err as { logs?: string[] }).logs ?? [],
+    );
     if (anchorErr) {
       expect(anchorErr.error.errorCode.code).to.equal(code);
       return;
@@ -38,7 +52,10 @@ describe("fee_vault", () => {
   const program = anchor.workspace.feeVault as Program<FeeVault>;
   const connection = provider.connection;
 
-  const [vaultPda, vaultBump] = PublicKey.findProgramAddressSync([VAULT_SEED], program.programId);
+  const [vaultPda, vaultBump] = PublicKey.findProgramAddressSync(
+    [VAULT_SEED],
+    program.programId,
+  );
 
   const authority = Keypair.generate();
   const emergencyAuthority = Keypair.generate();
@@ -50,7 +67,11 @@ describe("fee_vault", () => {
 
   before(async () => {
     await airdrop(connection, authority.publicKey, 2 * LAMPORTS_PER_SOL);
-    await airdrop(connection, emergencyAuthority.publicKey, 1 * LAMPORTS_PER_SOL);
+    await airdrop(
+      connection,
+      emergencyAuthority.publicKey,
+      1 * LAMPORTS_PER_SOL,
+    );
     await airdrop(connection, sponsor.publicKey, MIN_SPONSOR_BALANCE);
     await airdrop(connection, intruder.publicKey, 1 * LAMPORTS_PER_SOL);
   });
@@ -70,9 +91,13 @@ describe("fee_vault", () => {
 
     const vault = await program.account.feeVault.fetch(vaultPda);
     expect(vault.authority.toBase58()).to.equal(authority.publicKey.toBase58());
-    expect(vault.emergencyAuthority.toBase58()).to.equal(emergencyAuthority.publicKey.toBase58());
+    expect(vault.emergencyAuthority.toBase58()).to.equal(
+      emergencyAuthority.publicKey.toBase58(),
+    );
     expect(vault.maxDailySpend.toString()).to.equal(DAILY_LIMIT.toString());
-    expect(vault.maxPerTransaction.toString()).to.equal(PER_TX_LIMIT.toString());
+    expect(vault.maxPerTransaction.toString()).to.equal(
+      PER_TX_LIMIT.toString(),
+    );
     expect(vault.isEmergencyPaused).to.equal(false);
     expect(vault.totalSponsored.toNumber()).to.equal(0);
     expect(vault.dailySpent.toNumber()).to.equal(0);
@@ -259,7 +284,9 @@ describe("fee_vault", () => {
       const sponsorAfter = await connection.getBalance(sponsor.publicKey);
       const vaultAfter = await connection.getBalance(vaultPda);
       expect(sponsorAfter).to.equal(MIN_SPONSOR_BALANCE);
-      expect(vaultAfter).to.equal(vaultBefore + (sponsorBalance - MIN_SPONSOR_BALANCE));
+      expect(vaultAfter).to.equal(
+        vaultBefore + (sponsorBalance - MIN_SPONSOR_BALANCE),
+      );
     });
 
     it("is a no-op when sponsor is at or below the floor", async () => {
@@ -277,7 +304,9 @@ describe("fee_vault", () => {
         .signers([authority, sponsor])
         .rpc();
 
-      expect(await connection.getBalance(sponsor.publicKey)).to.equal(sponsorBefore);
+      expect(await connection.getBalance(sponsor.publicKey)).to.equal(
+        sponsorBefore,
+      );
       expect(await connection.getBalance(vaultPda)).to.equal(vaultBefore);
     });
 

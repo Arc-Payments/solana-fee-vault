@@ -2,7 +2,7 @@
 
 A production-grade Solana program and Dart client for **gasless SPL token payments** using a PDA-based fee vault.
 
-This repository contains a focused, security-vetted subset of the on-chain and mobile-client code that powers a real LATAM stablecoin payments app. The full app — including the proximity-payment transport layer and operational infrastructure — is intentionally not part of this repo.
+This repository contains a focused, security-vetted reference subset extracted from a larger LATAM stablecoin payments app. It preserves the on-chain fee-vault design and the client-side transaction-building patterns used by the app, but it is intentionally cleaned up for public review and should not be read as a byte-for-byte mirror of the private repo layout, deployment IDs, or operational infrastructure.
 
 ## What's in here
 
@@ -20,12 +20,15 @@ Per-transaction and per-day limits are enforced on-chain, so a compromised spons
 
 ### Build the program
 
-Requires [Anchor](https://www.anchor-lang.com/docs/installation) `0.32.1` and Solana CLI `3.x` (CI pins `v3.1.13`, which ships platform-tools `v1.52` / Rust 1.85, needed for transitive deps that use the 2024 edition).
+Requires [Anchor](https://www.anchor-lang.com/docs/installation) `0.32.1`, Solana CLI `3.x` (CI pins `v3.1.13`, which ships platform-tools `v1.52` / Rust 1.85, needed for transitive deps that use the 2024 edition), and standard Node tooling (`npm` / `npx`) for the TypeScript test harness.
 
 ```bash
+npm install
 anchor build
-anchor test
+anchor test --skip-lint --skip-build
 ```
+
+If you fork or deploy this program yourself, generate a fresh program ID before publishing or deploying by creating a new keypair and running `anchor keys sync` (see [`PRE_PUBLISH_CHECKLIST.md`](PRE_PUBLISH_CHECKLIST.md)).
 
 ### Use the Dart client
 
@@ -47,6 +50,8 @@ export FEE_VAULT_USDC_MINT="Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr"  # dev
 
 dart run example/gasless_transfer_example.dart
 ```
+
+The default Dart client flow assumes the sponsor is also the vault authority, so `FEE_VAULT_AUTHORITY_KEY` is the operator-side key that signs `top_up_sponsor` and pays the surrounding transaction fee.
 
 ## Documentation
 
