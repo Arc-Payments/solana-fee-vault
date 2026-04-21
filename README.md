@@ -1,8 +1,8 @@
 # fee-vault
 
-A production-grade Solana program and Dart client for **gasless SPL token payments** using a PDA-based fee vault.
+A Solana program and Dart client for **gasless SPL token payments** using a PDA-based fee vault.
 
-This repository contains a focused, security-vetted reference subset extracted from a larger LATAM stablecoin payments app. It preserves the on-chain fee-vault design and the client-side transaction-building patterns used by the app, but it is intentionally cleaned up for public review and should not be read as a byte-for-byte mirror of the private repo layout, deployment IDs, or operational infrastructure.
+This repository contains a focused,reference subset extracted from a larger LATAM stablecoin payments app. It preserves the on-chain fee-vault design and the client-side transaction-building patterns used by the app, but it is intentionally cleaned up for public review and should not be read as a byte-for-byte mirror of the private repo layout, deployment IDs, or operational infrastructure.
 
 ## What's in here
 
@@ -61,7 +61,7 @@ The default Dart client flow assumes the sponsor is also the vault authority, so
 
 ## What is intentionally not in this repo
 
-The proximity-payment transport, the production backend, fiat onramp integrations, the wallet UI, the LATAM-specific business logic, and any operational keys or RPC API credentials live in a private repository. This project is the on-chain and crypto-client foundation only.
+The production backend, fiat onramp integrations, the wallet UI, the LATAM-specific business logic, and any operational keys or RPC API credentials live in a private repository. This project is the on-chain and crypto-client foundation only.
 
 ## License
 
