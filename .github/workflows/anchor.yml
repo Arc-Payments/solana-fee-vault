@@ -45,6 +45,9 @@ jobs:
       - name: Install Node dependencies
         run: yarn install --frozen-lockfile || npm install
 
+      - name: Generate test keypair
+        run: solana-keygen new --no-bip39-passphrase --force --silent -o ~/.config/solana/id.json
+
       - name: Build
         run: anchor build
 
