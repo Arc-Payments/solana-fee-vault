@@ -20,7 +20,7 @@ Per-transaction and per-day limits are enforced on-chain, so a compromised spons
 
 ### Build the program
 
-Requires [Anchor](https://www.anchor-lang.com/docs/installation) `0.32.1` and Solana CLI `3.x` (CI pins `v3.0.14`, which ships platform-tools `v1.52` / Rust 1.85, needed for some transitive deps that use the 2024 edition).
+Requires [Anchor](https://www.anchor-lang.com/docs/installation) `0.32.1` and Solana CLI `3.x` (CI pins `v3.1.13`, which ships platform-tools `v1.52` / Rust 1.85, needed for transitive deps that use the 2024 edition).
 
 ```bash
 anchor build
