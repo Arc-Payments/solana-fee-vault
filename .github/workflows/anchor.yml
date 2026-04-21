@@ -27,8 +27,14 @@ jobs:
 
       - name: Install Solana CLI
         run: |
-          sh -c "$(curl -sSfL https://release.anza.xyz/v2.1.15/install)"
+          sh -c "$(curl -sSfL https://release.anza.xyz/v3.0.14/install)"
           echo "$HOME/.local/share/solana/install/active_release/bin" >> "$GITHUB_PATH"
+
+      - name: Verify SBF toolchain
+        run: |
+          export PATH="$HOME/.local/share/solana/install/active_release/bin:$PATH"
+          solana --version
+          cargo build-sbf --version
 
       - name: Install Anchor
         run: |
