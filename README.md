@@ -20,7 +20,7 @@ Per-transaction and per-day limits are enforced on-chain, so a compromised spons
 
 ### Build the program
 
-Requires [Anchor](https://www.anchor-lang.com/docs/installation) `0.32.1` and Solana `1.18+`.
+Requires [Anchor](https://www.anchor-lang.com/docs/installation) `0.32.1` and Solana CLI `2.x` (CI pins `v2.1.15`).
 
 ```bash
 anchor build
